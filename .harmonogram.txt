@@ -1,0 +1,24 @@
+Potřebuji ve spolupráci s tebou sestavit harmonogram pro jiné LLM. Harmonogram, který povede model k sestavení aplikace. Toto je můj kompletní popis aplikace. Projdi ho a vhodně uprav a strukturuj. Pakliže bych měl ještě něco doplnit, tak se mě na to zeptej.
+## Základní filozofie aplikace
+- jméno aplikace: Replicate AI GUI (replicate-ai-gui)
+- aplikace bude napsaná v pythonu a bude umožňovat běh v docker kontejneru
+- bude poskytovat webové rozhraní pro její obsluhu
+- bude umět komunikovat s API replicate - generování obrázků
+- bude vytvářet jednoduché uživatelské rozhraní pro obsluhu toho API
+- dostupné knihovny ke komunikaci s replicate API: https://github.com/replicate/replicate-python
+- knihovny pro komunikaci s Chat GPT-4o https://github.com/openai/openai-python/
+- aplikace používá pro své GUI moderní frameworky jako je bootstrap 5.3, font-awsome a jquery
+- pro webové rozhraní se použije Flask framework
+- na frontend jsou použity tmavé neutrální barvy jako používají profesionální grafické editory, které neruší vzhled samotných obrázků
+## Popis funkce aplikace
+- GUI aplikace nabízí větší input pole pro vstupní promt
+- select pole pro výběr modelu: black-forest-labs/flux-pro, black-forest-labs/flux-1.1-pro-ultra, black-forest-labs/flux-1.1-pro, black-forest-labs/flux-schnell-lora
+- select pole pro výběr poměru stran obrázku (1:1, 4:3, 16:9, 21:9)
+- tlačítko "Generovat obrázek" nejprve odešle promt  na api gpt-4o s instrukcí aby promt přeložil do angličtiny, pokud v angličtině není a přeložený promt se předá přes moji aplikaci na api replicate k vygenerování
+- tlačítko "Vylepšit promt" - toto tlačítko odešle promt na api gpt-4o s instrukcí aby model promt vylepšil, výsledek od chatgpt se promítne do pole promtu, uživatel má možnost vylepšený promt zkontrolovat a zasáhnout do něj před odesláním pomocí prvního tlačítka "Generovat obrázek"
+- aplikace v pravidelném intervalu (max 120 s) kontroluje každých 10 s, jestli je obrázek vygenerovaný, jakmile server replicate potvrdí dokončení, aplikace obrázek stáhne do souborového systému
+- pokud nastane nějaká chyba (nedostupné api pro vylepšení promtu, nedostupné api replicate, obrázek není vygenerován a podobně, použije se vyskakovací modal okno, které tuto chybu sdělí uživateli)
+- aplikace bude ke správě obrázků používat souborový systém. Jejich celkové množství není omezeno. Každý obrázek bude uložen ve formátu PNG, jako jeho název bude použit nějaký vhodný unikátní řetězec. Se stejným názvem bude vytvořen i soubor s metadaty k tomuto obrázku. Do metadat se uloží kompletní vstupní data (JSON formát), která uživatel definoval před stisknutím tlačítka "Generovat obrázek".
+- pod tlačítky "Generovat obrázek" a "Vylepšit promt" bude pole se stránkováním po 12 obrázcích. Každý obrázek bude mít tlačítko na jeho smazání z filesystému (včetně jeho metadat) a tlačítko "převzít nastavení" na převzetí metadat konkrétního obrázku. Toto tlačítko na převzetí metadat vyplní do vstupních polí formuláře všechna nastavení, kterým byl obrázek generován. Uživatel má možnost je upravit a použít k odeslání na nové generování.
+- Při aktivaci tlačítka "Generovat obrázek" nebo tlačítka "Vylepšit promt" se zobrazí načítací kolečko, které bude informovat o skutečnosti, že aplikace pracuje na pozadí a probíhá zpracování dat.
+- každé poslední zadání dat do formuláře zůstane uloženo v prohlížeči uživatele, pokud uživatel přijde na GUI aplikace a bude v jeho prohlížeči existovat nějaké poslední zadání, tak se vyplní do formuláře samo předem.

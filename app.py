@@ -1,10 +1,11 @@
 from flask import Flask, jsonify, request, send_from_directory, render_template
 from pythonjsonlogger import jsonlogger
+from dotenv import load_dotenv
 import logging
 import os
-from api.replicate_client import ReplicateClient
-from api.openai_client import OpenAIClient
-from utils.storage import ImageManager, MetadataManager
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logger = logging.getLogger()
@@ -27,6 +28,17 @@ app.config.update(
     IMAGE_STORAGE_PATH=os.path.join(os.path.dirname(__file__), 'images'),
     METADATA_STORAGE_PATH=os.path.join(os.path.dirname(__file__), 'metadata')
 )
+
+# Validate required environment variables
+if not app.config['REPLICATE_API_TOKEN']:
+    raise ValueError("REPLICATE_API_TOKEN environment variable is required")
+if not app.config['OPENAI_API_KEY']:
+    raise ValueError("OPENAI_API_KEY environment variable is required")
+
+# Import API clients after environment variables are loaded
+from api.replicate_client import ReplicateClient
+from api.openai_client import OpenAIClient
+from utils.storage import ImageManager, MetadataManager
 
 # Initialize clients and managers
 replicate_client = ReplicateClient(app.config['REPLICATE_API_TOKEN'])
@@ -64,7 +76,7 @@ def generate_image():
         result = replicate_client.generate_image(prompt, model, aspect_ratio)
 
         # Save image and metadata
-        image_filename = image_manager.save_image_from_url(result['image_url'])
+        image_filename = image_manager.save_image_from_file(result['image_url'])
         metadata_filename = metadata_manager.save_metadata(image_filename, result['metadata'])
 
         return jsonify({

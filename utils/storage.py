@@ -5,6 +5,7 @@ import logging
 from typing import Dict, List, Optional
 import requests
 from datetime import datetime
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -31,32 +32,31 @@ class ImageManager(FileManager):
         """Initialize image manager"""
         super().__init__(storage_path)
 
-    def save_image_from_url(self, url: str) -> str:
+    def save_image_from_file(self, source_path: str) -> str:
         """
-        Download and save image from URL
+        Save image from a local file
         
         Args:
-            url (str): URL of the image to download
+            source_path (str): Path to the source image file
             
         Returns:
             str: Filename of saved image
         """
         try:
-            response = requests.get(url, stream=True)
-            response.raise_for_status()
+            filename = self._generate_filename('webp')
+            dest_path = self._get_full_path(filename)
             
-            filename = self._generate_filename('png')
-            full_path = self._get_full_path(filename)
+            # Copy the file to our storage
+            shutil.copy2(source_path, dest_path)
             
-            with open(full_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+            # Remove the temporary file
+            os.unlink(source_path)
                     
             logger.info(f"Saved image: {filename}")
             return filename
             
         except Exception as e:
-            logger.error(f"Error saving image from URL: {str(e)}", exc_info=True)
+            logger.error(f"Error saving image from file: {str(e)}", exc_info=True)
             raise
 
     def delete_image(self, filename: str) -> None:

@@ -2,6 +2,9 @@ import replicate
 import logging
 from typing import Dict, Optional
 from replicate.exceptions import ModelError
+import base64
+import tempfile
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -50,19 +53,25 @@ class ReplicateClient:
 
             # Get the first output (image)
             output = next(iter(outputs))
-            image_url = output.url if hasattr(output, 'url') else str(output)
 
-            return {
-                'status': 'success',
-                'image_url': image_url,
-                'metadata': {
-                    'model': model_key,
-                    'prompt': prompt,
-                    'aspect_ratio': aspect_ratio,
-                    'width': width,
-                    'height': height
+            # Create a temporary file to save the image
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.webp') as temp_file:
+                # Write the image data
+                temp_file.write(output.read())
+                temp_file.flush()
+                
+                # Return the path to the temporary file
+                return {
+                    'status': 'success',
+                    'image_url': temp_file.name,
+                    'metadata': {
+                        'model': model_key,
+                        'prompt': prompt,
+                        'aspect_ratio': aspect_ratio,
+                        'width': width,
+                        'height': height
+                    }
                 }
-            }
 
         except ModelError as e:
             logger.error(f"Model error: {str(e)}", exc_info=True)

@@ -31,7 +31,7 @@ class OpenAIClient:
             - Maintaining the original intent
             Respond only with the enhanced prompt, no explanations."""
 
-            response = self.client.chat.completions.create(
+            completion = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": system_message},
@@ -41,7 +41,7 @@ class OpenAIClient:
                 max_tokens=200
             )
 
-            improved_prompt = response.choices[0].message.content.strip()
+            improved_prompt = completion.choices[0].message.content.strip()
             
             logger.info(f"Improved prompt: {improved_prompt}")
             return improved_prompt

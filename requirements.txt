@@ -1,5 +1,6 @@
 Flask==3.0.2
-replicate-python==0.22.2
-openai==1.14.0
+replicate==1.0.4
+openai>=1.14.0
 python-json-logger==2.0.7
 requests==2.31.0
+python-dotenv==1.0.1
