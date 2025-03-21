@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="cs" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Replicate AI - Image Generator</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bs-body-bg: #1a1a1a;
+            --bs-body-color: #e0e0e0;
+        }
+        
+        body {
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+        
+        .form-control, .form-select {
+            background-color: #2a2a2a;
+            border-color: #404040;
+            color: #e0e0e0;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: #2a2a2a;
+            border-color: #505050;
+            color: #e0e0e0;
+        }
+        
+        .card {
+            background-color: #2a2a2a;
+            border-color: #404040;
+        }
+        
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+        
+        .image-card {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .image-card img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+        }
+        
+        .image-card .overlay {
+            position: absolute;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            transition: bottom 0.3s ease-in-out;
+        }
+        
+        .image-card:hover .overlay {
+            bottom: 0;
+        }
+        
+        .spinner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Spinner -->
+    <div class="spinner-overlay" id="spinnerOverlay">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Načítání...</span>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container py-4">
+        <!-- Header -->
+        <header class="pb-3 mb-4 border-bottom">
+            <h1 class="display-5 fw-bold">Replicate AI</h1>
+            <p class="lead">Generátor obrázků pomocí AI modelů</p>
+        </header>
+
+        <!-- Image Generation Form -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form id="generationForm">
+                            <div class="mb-3">
+                                <label for="prompt" class="form-label">Prompt</label>
+                                <div class="input-group">
+                                    <textarea class="form-control" id="prompt" rows="3" required></textarea>
+                                    <button class="btn btn-outline-secondary" type="button" id="improvePrompt">
+                                        <i class="fas fa-magic"></i> Vylepšit
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="model" class="form-label">Model</label>
+                                    <select class="form-select" id="model" required>
+                                        <option value="flux-pro">Flux Pro</option>
+                                        <option value="flux-1.1-pro-ultra">Flux 1.1 Pro Ultra</option>
+                                        <option value="flux-1.1-pro">Flux 1.1 Pro</option>
+                                        <option value="flux-schnell-lora">Flux Schnell LoRA</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="aspectRatio" class="form-label">Poměr stran</label>
+                                    <select class="form-select" id="aspectRatio" required>
+                                        <option value="1:1">1:1 (Čtverec)</option>
+                                        <option value="4:3">4:3</option>
+                                        <option value="16:9">16:9</option>
+                                        <option value="21:9">21:9 (Ultrawide)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary" id="generateBtn">
+                                    <i class="fas fa-image me-2"></i>Generovat
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Gallery -->
+        <div class="row mb-4" id="imageGallery">
+            <!-- Images will be dynamically inserted here -->
+        </div>
+
+        <!-- Pagination -->
+        <nav aria-label="Gallery pagination" class="d-flex justify-content-center">
+            <ul class="pagination" id="galleryPagination">
+                <!-- Pagination will be dynamically inserted here -->
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chyba</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavřít</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
