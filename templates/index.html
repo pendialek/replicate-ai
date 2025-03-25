@@ -53,10 +53,19 @@
             overflow: hidden;
         }
         
+        .image-card {
+            position: relative;
+            padding-bottom: 100%; /* Vytvoří čtvercový kontejner */
+        }
+
         .image-card img {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: auto;
-            object-fit: cover;
+            height: 100%;
+            object-fit: contain; /* Zachová poměr stran */
+            background-color: #1a1a1a; /* Tmavé pozadí pro prázdné oblasti */
         }
         
         .image-card .overlay {
@@ -73,6 +82,49 @@
             bottom: 0;
         }
         
+        .image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            cursor: pointer;
+        }
+
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+            margin: auto;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10001;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        .modal-close:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
         .spinner-overlay {
             position: fixed;
             top: 0;
@@ -85,9 +137,21 @@
             align-items: center;
             z-index: 9999;
         }
+
+        .image-card img {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal">
+        <div class="modal-close">
+            <i class="fas fa-times"></i>
+        </div>
+        <img id="modalImage" src="" alt="Full size image">
+    </div>
+
     <!-- Loading Spinner -->
     <div class="spinner-overlay" id="spinnerOverlay">
         <div class="spinner-border text-light" role="status">
@@ -112,7 +176,7 @@
                             <div class="mb-3">
                                 <label for="prompt" class="form-label">Prompt</label>
                                 <div class="input-group">
-                                    <textarea class="form-control" id="prompt" rows="3" required></textarea>
+                                    <textarea class="form-control" id="prompt" rows="6" style="resize: vertical;" required></textarea>
                                     <button class="btn btn-outline-secondary" type="button" id="improvePrompt">
                                         <i class="fas fa-magic"></i> Vylepšit
                                     </button>
@@ -132,9 +196,14 @@
                                     <label for="aspectRatio" class="form-label">Poměr stran</label>
                                     <select class="form-select" id="aspectRatio" required>
                                         <option value="1:1">1:1 (Čtverec)</option>
+                                        <option value="16:9">16:9 (Širokoúhlý)</option>
+                                        <option value="3:2">3:2</option>
+                                        <option value="2:3">2:3 (Portrét)</option>
+                                        <option value="4:5">4:5 (Instagram)</option>
+                                        <option value="5:4">5:4</option>
+                                        <option value="9:16">9:16 (Mobilní)</option>
+                                        <option value="3:4">3:4</option>
                                         <option value="4:3">4:3</option>
-                                        <option value="16:9">16:9</option>
-                                        <option value="21:9">21:9 (Ultrawide)</option>
                                     </select>
                                 </div>
                             </div>
@@ -160,6 +229,25 @@
                 <!-- Pagination will be dynamically inserted here -->
             </ul>
         </nav>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Potvrzení smazání</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Opravdu chcete smazat tento obrázek?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">Smazat</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Error Modal -->

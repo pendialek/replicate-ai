@@ -1,5 +1,6 @@
 import replicate
 import logging
+import requests
 from typing import Dict, Optional
 from replicate.exceptions import ModelError
 import base64
@@ -41,23 +42,42 @@ class ReplicateClient:
             # Convert aspect ratio to dimensions
             width, height = self._get_dimensions(aspect_ratio)
             
+            # Generate seed
+            seed = self._generate_seed()
+            
+            # Log API parameters
+            logger.info("Calling Replicate API with parameters", extra={
+                "model": self.SUPPORTED_MODELS[model_key],
+                "prompt": prompt,
+                "width": width,
+                "height": height,
+                "aspect_ratio": aspect_ratio,
+                "seed": seed
+            })
+            
             # Run the model
-            outputs = replicate.run(
+            output = replicate.run(
                 self.SUPPORTED_MODELS[model_key],
                 input={
                     "prompt": prompt,
                     "width": width,
-                    "height": height
+                    "height": height,
+                    "aspect_ratio": aspect_ratio,
+                    "seed": seed
                 }
             )
 
-            # Get the first output (image)
-            output = next(iter(outputs))
-
-            # Create a temporary file to save the image
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.webp') as temp_file:
-                # Write the image data
-                temp_file.write(output.read())
+            # Log the output for debugging
+            logger.info(f"Model output: {output}")
+            
+            # Create temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.webp', mode='wb') as temp_file:
+                logger.info("Writing image data to file")
+                # Process all chunks of output
+                for chunk in output:
+                    if not chunk:
+                        continue
+                    temp_file.write(chunk)
                 temp_file.flush()
                 
                 # Return the path to the temporary file
@@ -83,13 +103,25 @@ class ReplicateClient:
             logger.error(f"Error generating image: {str(e)}", exc_info=True)
             raise
 
+    def _generate_seed(self) -> int:
+        """Generate a random seed for image generation"""
+        return int.from_bytes(os.urandom(4), byteorder='big') % 1000000000
+
     def _get_dimensions(self, aspect_ratio: str) -> tuple[int, int]:
         """Convert aspect ratio to pixel dimensions"""
+        # Base dimension to maintain consistent image sizes
+        base_dim = 1024
+        
         ratios = {
-            '1:1': (1024, 1024),
-            '4:3': (1024, 768),
-            '16:9': (1024, 576),
-            '21:9': (1024, 439)
+            '1:1': (base_dim, base_dim),
+            '16:9': (base_dim, int(base_dim * 9/16)),
+            '3:2': (base_dim, int(base_dim * 2/3)),
+            '2:3': (int(base_dim * 2/3), base_dim),
+            '4:5': (int(base_dim * 4/5), base_dim),
+            '5:4': (base_dim, int(base_dim * 4/5)),
+            '9:16': (int(base_dim * 9/16), base_dim),
+            '3:4': (int(base_dim * 3/4), base_dim),
+            '4:3': (base_dim, int(base_dim * 3/4))
         }
         
         if aspect_ratio not in ratios:

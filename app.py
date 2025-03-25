@@ -137,7 +137,7 @@ def get_metadata(image_id):
 def delete_image(image_id):
     """Delete image and its metadata"""
     try:
-        image_filename = f"{image_id}.png"
+        image_filename = f"{image_id}.webp"
         metadata_filename = f"{image_id}.json"
 
         image_manager.delete_image(image_filename)

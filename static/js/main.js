@@ -62,15 +62,17 @@ function createImageCard(image) {
             <div class="card image-card">
                 <img src="/images/${image.image_filename}" class="card-img-top" alt="Generated image">
                 <div class="overlay">
-                    <div class="d-flex justify-content-between mb-2">
-                        <button class="btn btn-sm btn-outline-light copy-settings" data-image-id="${image.image_filename}">
+                    <div class="d-flex justify-content-between">
+                        <button class="btn btn-sm btn-outline-light copy-settings" data-image-id="${image.image_filename}" title="Kopírovat nastavení">
                             <i class="fas fa-copy"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger delete-image" data-image-id="${image.image_filename}">
+                        <button class="btn btn-sm btn-outline-light download-image" data-image-path="/images/${image.image_filename}" title="Stáhnout obrázek">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-image" data-image-id="${image.image_filename}" title="Smazat obrázek">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
-                    <small class="text-light">${image.prompt}</small>
                 </div>
             </div>
         </div>
@@ -266,19 +268,33 @@ $(document).ready(() => {
         }
     });
     
-    // Delete image
-    $gallery.on('click', '.delete-image', async (e) => {
+    // Initialize delete modal
+    const deleteModal = new bootstrap.Modal('#deleteModal');
+    let imageToDelete = null;
+
+    // Delete image button click
+    $gallery.on('click', '.delete-image', (e) => {
         const imageId = $(e.currentTarget).data('image-id');
-        if (confirm('Opravdu chcete smazat tento obrázek?')) {
-            await deleteImage(imageId);
+        imageToDelete = imageId.replace(/\.(webp|png)$/, '');
+        deleteModal.show();
+    });
+
+    // Confirm delete button click
+    $('#confirmDelete').on('click', async () => {
+        if (imageToDelete) {
+            await deleteImage(imageToDelete);
+            deleteModal.hide();
+            imageToDelete = null;
         }
     });
     
     // Copy settings
     $gallery.on('click', '.copy-settings', async (e) => {
         const imageId = $(e.currentTarget).data('image-id');
+        // Odstranit příponu z ID před voláním API
+        const cleanImageId = imageId.replace(/\.(webp|png)$/, '');
         try {
-            const response = await fetch(`/api/metadata/${imageId}`);
+            const response = await fetch(`/api/metadata/${cleanImageId}`);
             const data = await response.json();
             
             if (!response.ok) throw new Error(data.error);
@@ -293,6 +309,45 @@ $(document).ready(() => {
         }
     });
     
+    // Download image
+    $gallery.on('click', '.download-image', (e) => {
+        const imagePath = $(e.currentTarget).data('image-path');
+        const link = document.createElement('a');
+        link.href = imagePath;
+        link.download = imagePath.split('/').pop();
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // Image modal
+    const $imageModal = $('#imageModal');
+    const $modalImage = $('#modalImage');
+
+    // Open image modal
+    $gallery.on('click', '.card-img-top', function(e) {
+        e.stopPropagation(); // Prevent triggering overlay buttons
+        const imageSrc = $(this).attr('src');
+        $modalImage.attr('src', imageSrc);
+        $imageModal.css('display', 'flex');
+        $('body').css('overflow', 'hidden'); // Prevent scrolling
+    });
+
+    // Close modal on background or image click
+    $imageModal.on('click', function(e) {
+        if (e.target === this || e.target === $modalImage[0]) {
+            closeImageModal();
+        }
+    });
+
+    // Close modal on X button click
+    $('.modal-close').on('click', closeImageModal);
+
+    function closeImageModal() {
+        $imageModal.css('display', 'none');
+        $('body').css('overflow', '');
+    }
+
     // Form input changes
     $form.on('change', 'input, select, textarea', saveFormState);
 });
