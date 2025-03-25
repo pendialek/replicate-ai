@@ -46,8 +46,9 @@ class ImageManager(FileManager):
             filename = self._generate_filename('webp')
             dest_path = self._get_full_path(filename)
             
-            # Copy the file to our storage
-            shutil.copy2(source_path, dest_path)
+            # Copy the file using binary mode
+            with open(source_path, 'rb') as src, open(dest_path, 'wb') as dst:
+                dst.write(src.read())
             
             # Remove the temporary file
             os.unlink(source_path)
