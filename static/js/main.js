@@ -60,6 +60,7 @@ function createImageCard(image) {
     return `
         <div class="col-md-4 col-lg-3 mb-4">
             <div class="card image-card">
+                <div class="ambient-background" style="background-image: url('/images/${image.image_filename}')"></div>
                 <img src="/images/${image.image_filename}" class="card-img-top" alt="Generated image">
                 <div class="overlay">
                     <div class="d-flex justify-content-between">
