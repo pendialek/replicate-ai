@@ -4,21 +4,22 @@ FROM python:3.11-slim
 RUN mkdir -p /app
 WORKDIR /app
 
-# Install system dependencies including redis-server
+# Install system dependencies including redis-server and git
 RUN apt-get update && apt-get install -y \
     build-essential \
     redis-server \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first and install dependencies
-COPY requirements.txt /app/
+# Clone repository
+RUN git clone https://github.com/pendialek/replicate-ai.git . && \
+    rm -rf .git
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Verify key packages are installed correctly
 RUN python3 -c "import flask; import replicate; import openai; import redis; print('All key packages verified successfully!')"
-
-# Copy the rest of the application code
-COPY . /app/
 
 # Create directories and set permissions
 RUN mkdir -p /app/images /app/metadata && \
