@@ -8,15 +8,14 @@ RUN apt-get update && apt-get install -y \
     redis-server \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# Copy application code first
+COPY . .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Verify key packages are installed correctly
 RUN python3 -c "import flask; import replicate; import openai; import redis; print('All key packages verified successfully!')"
-
-# Copy application code
-COPY . .
 
 # Create directories and set permissions
 RUN mkdir -p /app/images /app/metadata && \
