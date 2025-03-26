@@ -22,6 +22,19 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
+# Verify key packages are installed correctly
+echo "Verifying installations..."
+python3 -c "
+import flask
+import replicate
+import openai
+import redis
+print('All key packages verified successfully!')
+" || {
+    echo "Error: Some required packages failed to install correctly"
+    exit 1
+}
+
 # Create necessary directories
 mkdir -p images
 mkdir -p metadata
