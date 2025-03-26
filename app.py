@@ -1,24 +1,65 @@
 from flask import Flask, jsonify, request, send_from_directory, render_template
+from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
 from pythonjsonlogger import jsonlogger
 from dotenv import load_dotenv
 import logging
 import os
+from logging.handlers import RotatingFileHandler
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Configure logging
 logger = logging.getLogger()
-logHandler = logging.StreamHandler()
-formatter = jsonlogger.JsonFormatter()
-logHandler.setFormatter(formatter)
-logger.addHandler(logHandler)
-logger.setLevel(logging.INFO)
+log_file = os.getenv('LOG_FILE', 'app.log')
+log_level = getattr(logging, os.getenv('LOG_LEVEL', 'INFO'))
+
+# Add file handler with rotation
+file_handler = RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=10)
+file_handler.setFormatter(jsonlogger.JsonFormatter())
+logger.addHandler(file_handler)
+
+# Add console handler
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(jsonlogger.JsonFormatter())
+logger.addHandler(console_handler)
+
+logger.setLevel(log_level)
 
 # Initialize Flask app
-app = Flask(__name__, 
+app = Flask(__name__,
     static_folder='static',
     template_folder='templates'
+)
+
+# Security configurations
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24))
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Initialize security extensions
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+Talisman(app,
+    content_security_policy={
+        'default-src': "'self'",
+        'img-src': "'self' data:",
+        'script-src': "'self' 'unsafe-inline' cdn.jsdelivr.net code.jquery.com",
+        'style-src': "'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com",
+        'font-src': "'self' cdnjs.cloudflare.com"
+    }
+)
+
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    storage_uri=os.getenv('RATELIMIT_STORAGE_URL', 'memory://'),
+    default_limits=[os.getenv('RATELIMIT_DEFAULT', '30/hour')],
+    strategy=os.getenv('RATELIMIT_STRATEGY', 'fixed-window')
 )
 
 # Load configuration
@@ -50,19 +91,73 @@ metadata_manager = MetadataManager(app.config['METADATA_STORAGE_PATH'])
 os.makedirs(app.config['IMAGE_STORAGE_PATH'], exist_ok=True)
 os.makedirs(app.config['METADATA_STORAGE_PATH'], exist_ok=True)
 
+# Custom error handlers
+@app.errorhandler(400)
+def bad_request_error(error):
+    """Bad request error handler"""
+    logger.warning(f"Bad request: {str(error)}")
+    return jsonify({
+        'error': 'Bad request',
+        'message': str(error),
+        'type': 'BadRequestError'
+    }), 400
+
+@app.errorhandler(404)
+def not_found_error(error):
+    """Not found error handler"""
+    logger.warning(f"Not found: {str(error)}")
+    return jsonify({
+        'error': 'Not found',
+        'message': str(error),
+        'type': 'NotFoundError'
+    }), 404
+
+@app.errorhandler(429)
+def ratelimit_error(error):
+    """Rate limit exceeded error handler"""
+    logger.warning(f"Rate limit exceeded: {str(error)}")
+    return jsonify({
+        'error': 'Too many requests',
+        'message': 'Rate limit exceeded. Please try again later.',
+        'type': 'RateLimitError'
+    }), 429
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Internal server error handler"""
+    logger.error(f"Internal server error: {str(error)}", exc_info=True)
+    return jsonify({
+        'error': 'Internal server error',
+        'message': 'An unexpected error occurred',
+        'type': 'InternalServerError'
+    }), 500
+
+@app.errorhandler(Exception)
+def handle_error(error):
+    """Global error handler for unhandled exceptions"""
+    logger.error(f"Unhandled error occurred: {str(error)}", exc_info=True)
+    return jsonify({
+        'error': 'Internal server error',
+        'message': 'An unexpected error occurred',
+        'type': error.__class__.__name__
+    }), getattr(error, 'code', 500)
+
 @app.route('/')
 def index():
     """Render main page"""
     return render_template('index.html')
 
 @app.route('/health', methods=['GET'])
+@limiter.limit("60/minute")
 def health_check():
     """Basic health check endpoint"""
     return jsonify({'status': 'healthy'})
 
+# Rate-limited endpoints
 @app.route('/api/generate-image', methods=['POST'])
+@limiter.limit("5/minute")
 def generate_image():
-    """Generate image endpoint"""
+    """Generate image endpoint with rate limiting"""
     try:
         data = request.get_json()
         prompt = data.get('prompt')
@@ -95,3 +190,87 @@ def generate_image():
     except Exception as e:
         logger.error(f"Error generating image: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/improve-prompt', methods=['POST'])
+@limiter.limit("10/minute")
+def improve_prompt():
+    """Improve prompt endpoint with rate limiting"""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt')
+
+        if not prompt:
+            return jsonify({'error': 'Prompt is required'}), 400
+
+        improved_prompt = openai_client.improve_prompt(prompt)
+        return jsonify({'improved_prompt': improved_prompt})
+
+    except Exception as e:
+        logger.error(f"Error improving prompt: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/images', methods=['GET'])
+@limiter.limit("30/minute")
+def list_images():
+    """List images with pagination and rate limiting"""
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 12))
+        
+        result = metadata_manager.list_images(page, per_page)
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error listing images: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/metadata/<image_id>', methods=['GET'])
+@limiter.limit("30/minute")
+def get_metadata(image_id):
+    """Get metadata for an image with rate limiting"""
+    try:
+        metadata = metadata_manager.get_metadata(f"{image_id}.json")
+        if metadata is None:
+            return jsonify({'error': 'Metadata not found'}), 404
+        return jsonify(metadata)
+
+    except Exception as e:
+        logger.error(f"Error getting metadata: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/image/<image_id>', methods=['DELETE'])
+@limiter.limit("10/minute")
+def delete_image(image_id):
+    """Delete image and its metadata with rate limiting"""
+    try:
+        image_filename = f"{image_id}.webp"
+        metadata_filename = f"{image_id}.json"
+
+        image_manager.delete_image(image_filename)
+        metadata_manager.delete_metadata(metadata_filename)
+
+        return jsonify({'status': 'success'})
+
+    except Exception as e:
+        logger.error(f"Error deleting image: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/images/<filename>')
+@limiter.limit("60/minute")
+def serve_image(filename):
+    """Serve image files with rate limiting"""
+    return send_from_directory(app.config['IMAGE_STORAGE_PATH'], filename)
+
+if __name__ == '__main__':
+    # Get configuration from environment
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_ENV') == 'development'
+    
+    # Run the app
+    app.run(
+        host=host,
+        port=port,
+        debug=debug,
+        ssl_context='adhoc' if not debug else None  # Enable HTTPS in production
+    )
