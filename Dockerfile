@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+# Create and set working directory
+RUN mkdir -p /app
 WORKDIR /app
 
 # Install system dependencies including redis-server
@@ -8,14 +10,15 @@ RUN apt-get update && apt-get install -y \
     redis-server \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy application code first
-COPY . .
-
-# Install Python dependencies
+# Copy requirements first and install dependencies
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Verify key packages are installed correctly
 RUN python3 -c "import flask; import replicate; import openai; import redis; print('All key packages verified successfully!')"
+
+# Copy the rest of the application code
+COPY . /app/
 
 # Create directories and set permissions
 RUN mkdir -p /app/images /app/metadata && \
