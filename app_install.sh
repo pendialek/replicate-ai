@@ -54,6 +54,7 @@ fi
 chown -R $SUDO_USER:$SUDO_USER .
 chmod -R 755 .
 chmod 600 .env
+chmod +x app_run.sh
 
 # Start Redis server
 systemctl enable redis-server
@@ -61,4 +62,4 @@ systemctl start redis-server
 
 echo "Installation completed successfully!"
 echo "Please configure your API keys in the .env file before running the application."
-echo "You can start the application with: source venv/bin/activate && python app.py"
+echo "You can start the application by running: ./app_run.sh"
