@@ -11,6 +11,44 @@ class OpenAIClient:
         """Initialize OpenAI client with API key"""
         self.client = OpenAI(api_key=api_key)
 
+    def translate_to_english(self, prompt: str) -> str:
+        """
+        Translate the prompt to English using GPT-4
+        
+        Args:
+            prompt (str): Original prompt to translate
+            
+        Returns:
+            str: English translation of the prompt
+        """
+        try:
+            system_message = """You are a professional translator.
+            Your task is to translate the given text to English.
+            Focus on:
+            - Accurate translation while maintaining the original meaning
+            - Natural English phrasing
+            - Preserving any technical or specific terms
+            Respond only with the English translation, no explanations."""
+
+            completion = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": f"Translate this text to English: {prompt}"}
+                ],
+                temperature=0.3,
+                max_tokens=200
+            )
+
+            translated_prompt = completion.choices[0].message.content.strip()
+            
+            logger.info(f"Translated prompt: {translated_prompt}")
+            return translated_prompt
+
+        except Exception as e:
+            logger.error(f"Error translating prompt: {str(e)}", exc_info=True)
+            raise
+
     def improve_prompt(self, prompt: str) -> str:
         """
         Improve the image generation prompt using GPT-4

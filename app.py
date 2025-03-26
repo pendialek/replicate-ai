@@ -72,8 +72,15 @@ def generate_image():
         if not prompt:
             return jsonify({'error': 'Prompt is required'}), 400
 
-        # Generate image using Replicate
-        result = replicate_client.generate_image(prompt, model, aspect_ratio)
+        # Translate prompt to English
+        translated_prompt = openai_client.translate_to_english(prompt)
+
+        # Generate image using Replicate with translated prompt
+        result = replicate_client.generate_image(translated_prompt, model, aspect_ratio)
+
+        # Add original and translated prompts to metadata
+        result['metadata']['original_prompt'] = prompt
+        result['metadata']['translated_prompt'] = translated_prompt
 
         # Save image and metadata
         image_filename = image_manager.save_image_from_file(result['image_url'])
@@ -88,80 +95,3 @@ def generate_image():
     except Exception as e:
         logger.error(f"Error generating image: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
-
-@app.route('/api/improve-prompt', methods=['POST'])
-def improve_prompt():
-    """Improve prompt using GPT-4"""
-    try:
-        data = request.get_json()
-        prompt = data.get('prompt')
-
-        if not prompt:
-            return jsonify({'error': 'Prompt is required'}), 400
-
-        improved_prompt = openai_client.improve_prompt(prompt)
-        return jsonify({'improved_prompt': improved_prompt})
-
-    except Exception as e:
-        logger.error(f"Error improving prompt: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/images', methods=['GET'])
-def list_images():
-    """List images with pagination"""
-    try:
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 12))
-        
-        result = metadata_manager.list_images(page, per_page)
-        return jsonify(result)
-
-    except Exception as e:
-        logger.error(f"Error listing images: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/metadata/<image_id>', methods=['GET'])
-def get_metadata(image_id):
-    """Get metadata for an image"""
-    try:
-        metadata = metadata_manager.get_metadata(f"{image_id}.json")
-        if metadata is None:
-            return jsonify({'error': 'Metadata not found'}), 404
-        return jsonify(metadata)
-
-    except Exception as e:
-        logger.error(f"Error getting metadata: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/image/<image_id>', methods=['DELETE'])
-def delete_image(image_id):
-    """Delete image and its metadata"""
-    try:
-        image_filename = f"{image_id}.webp"
-        metadata_filename = f"{image_id}.json"
-
-        image_manager.delete_image(image_filename)
-        metadata_manager.delete_metadata(metadata_filename)
-
-        return jsonify({'status': 'success'})
-
-    except Exception as e:
-        logger.error(f"Error deleting image: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/images/<filename>')
-def serve_image(filename):
-    """Serve image files"""
-    return send_from_directory(app.config['IMAGE_STORAGE_PATH'], filename)
-
-@app.errorhandler(Exception)
-def handle_error(error):
-    """Global error handler"""
-    logger.error(f"Error occurred: {str(error)}", exc_info=True)
-    return jsonify({
-        'error': str(error),
-        'type': error.__class__.__name__
-    }), getattr(error, 'code', 500)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
