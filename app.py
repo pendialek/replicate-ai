@@ -2,7 +2,6 @@ from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_talisman import Talisman
 from pythonjsonlogger import jsonlogger
 from dotenv import load_dotenv
 import logging
@@ -35,23 +34,8 @@ app = Flask(__name__,
     template_folder='templates'
 )
 
-# Security configurations
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24))
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-
-# Initialize security extensions
-CORS(app, resources={r"/api/*": {"origins": "*"}})
-Talisman(app,
-    content_security_policy={
-        'default-src': "'self'",
-        'img-src': "'self' data:",
-        'script-src': "'self' 'unsafe-inline' cdn.jsdelivr.net code.jquery.com",
-        'style-src': "'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com",
-        'font-src': "'self' cdnjs.cloudflare.com"
-    }
-)
+# Initialize CORS
+CORS(app)
 
 # Initialize rate limiter
 limiter = Limiter(
@@ -271,6 +255,5 @@ if __name__ == '__main__':
     app.run(
         host=host,
         port=port,
-        debug=debug,
-        ssl_context='adhoc' if not debug else None  # Enable HTTPS in production
+        debug=debug
     )
