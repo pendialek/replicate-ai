@@ -181,30 +181,6 @@
         .image-card img {
             cursor: pointer;
         }
-
-        /* Responsive layout for prompt and improve button */
-        @media (max-width: 767.98px) { /* Apply below md breakpoint */
-          label[for="prompt"] + .input-group {
-            /* Change flex direction to column */
-            flex-direction: column;
-          }
-
-          label[for="prompt"] + .input-group > #prompt {
-            /* Reset border radius modified by input-group */
-            border-top-right-radius: var(--bs-border-radius);
-            border-bottom-right-radius: var(--bs-border-radius);
-            /* Add space below textarea */
-            margin-bottom: 0.5rem;
-          }
-
-          label[for="prompt"] + .input-group > #improvePrompt {
-            /* Reset border radius modified by input-group */
-            border-top-left-radius: var(--bs-border-radius);
-            border-bottom-left-radius: var(--bs-border-radius);
-            /* Make button full width */
-            width: 100%;
-          }
-        }
     </style>
 </head>
 <body>
@@ -239,9 +215,12 @@
                         <form id="generationForm">
                             <div class="mb-3">
                                 <label for="prompt" class="form-label">Prompt</label>
-                                <div class="input-group">
-                                    <textarea class="form-control" id="prompt" rows="6" style="resize: vertical;" required></textarea>
-                                    <button class="btn btn-outline-secondary" type="button" id="improvePrompt">
+                                <!-- Responzivní kontejner: sloupec na mobilu, řádek od 'md' výše -->
+                                <div class="d-flex flex-column flex-md-row">
+                                    <!-- Textarea: roste na desktopu, plná šířka a mezera dole na mobilu -->
+                                    <textarea class="form-control flex-grow-1 mb-2 mb-md-0" id="prompt" rows="6" style="resize: vertical;" required></textarea>
+                                    <!-- Tlačítko: auto šířka a mezera vlevo na desktopu, plná šířka na mobilu -->
+                                    <button class="btn btn-outline-secondary w-100 w-md-auto ms-md-2" type="button" id="improvePrompt">
                                         <i class="fas fa-magic"></i> Vylepšit
                                     </button>
                                 </div>
