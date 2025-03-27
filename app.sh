@@ -43,8 +43,25 @@ case "$1" in
     venv/bin/gunicorn --bind "$BIND_ADDRESS" app:app
     ;;
   --debug)
-    echo "Run app.py in debug mode for development"
-    python3 -m venv venv
+    echo "Running app.py in debug mode using Flask development server"
+    # Ensure venv exists, create if not
+    if [ ! -d "venv" ]; then
+        echo "Creating virtual environment 'venv'"
+        python3 -m venv venv
+        # Install requirements if venv was just created
+        echo "Installing requirements..."
+        venv/bin/pip install --upgrade pip
+        venv/bin/pip install -r requirements.txt || { echo "Failed to install requirements"; exit 1; }
+    fi
+
+    # Set Flask environment to development for debug mode
+    export FLASK_ENV=development
+    # export FLASK_DEBUG=1 # Alternative or additional flag
+
+    echo "Starting Flask development server..."
+    # Run Flask development server from the virtual environment
+    # It will typically bind to 127.0.0.1:5000 by default
+    venv/bin/flask run
     ;;
   --install)
     echo "Install option selected"
