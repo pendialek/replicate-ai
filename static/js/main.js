@@ -127,8 +127,8 @@ async function loadGallery(page = 1) {
             $gallery.append(createImageCard(image));
         });
         
-        $pagination.html(createPagination(data.total_pages));
         currentPage = page;
+        $pagination.html(createPagination(data.total_pages));
         
     } catch (error) {
         showError('Chyba při načítání galerie: ' + error.message);
