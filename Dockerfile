@@ -24,7 +24,7 @@ RUN python3 -c "import flask; import replicate; import openai; import redis; pri
 # Create directories and set permissions
 RUN mkdir -p /app/images /app/metadata && \
     chmod -R 755 . && \
-    chmod +x app_run.sh
+    chmod +x app.sh
 
 # Setup .env file if it doesn't exist
 RUN if [ ! -f ".env" ]; then \
@@ -40,7 +40,7 @@ ENV PYTHONUNBUFFERED=1
 ENV RATELIMIT_STORAGE_URL=redis://localhost:6379/0
 
 # Create script to start both redis and the app
-RUN echo '#!/bin/bash\nservice redis-server start\n./app_run.sh' > /app/docker-entrypoint.sh && \
+RUN echo '#!/bin/bash\nservice redis-server start\n./app.sh --production' > /app/docker-entrypoint.sh && \
     chmod +x /app/docker-entrypoint.sh
 
 # Expose port
