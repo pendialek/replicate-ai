@@ -181,6 +181,30 @@
         .image-card img {
             cursor: pointer;
         }
+
+        /* Responsive layout for prompt and improve button */
+        @media (max-width: 767.98px) { /* Apply below md breakpoint */
+          label[for="prompt"] + .input-group {
+            /* Change flex direction to column */
+            flex-direction: column;
+          }
+
+          label[for="prompt"] + .input-group > #prompt {
+            /* Reset border radius modified by input-group */
+            border-top-right-radius: var(--bs-border-radius);
+            border-bottom-right-radius: var(--bs-border-radius);
+            /* Add space below textarea */
+            margin-bottom: 0.5rem;
+          }
+
+          label[for="prompt"] + .input-group > #improvePrompt {
+            /* Reset border radius modified by input-group */
+            border-top-left-radius: var(--bs-border-radius);
+            border-bottom-left-radius: var(--bs-border-radius);
+            /* Make button full width */
+            width: 100%;
+          }
+        }
     </style>
 </head>
 <body>
