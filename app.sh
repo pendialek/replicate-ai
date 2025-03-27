@@ -125,7 +125,7 @@ print('All key packages verified successfully!')" || {
     echo "\n"
     echo "Installation completed successfully!"
     echo "Please configure your API keys in the .env file before running the application."
-    echo "You can start the application by running: ./app_run.sh"
+    echo "You can start the application in debug mode by running: ./app.sh --debug"
     ;;
   *)
     echo "Usage: $0 {--production|--debug|--install}"
