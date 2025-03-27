@@ -3,17 +3,53 @@
 # Check the first argument passed to the script
 case "$1" in
   --production)
-    echo "Run app.py in production mode"
-    python3 app.py
+    echo "Running app.py in production mode using Gunicorn"
+    # Ensure venv exists, although install should have created it
+    if [ ! -d "venv" ]; then
+        echo "Error: Virtual environment 'venv' not found. Run --install first."
+        exit 1
+    fi
+    # Define default host and port
+    DEFAULT_HOST="0.0.0.0"
+    DEFAULT_PORT="8000"
+    HOST=$DEFAULT_HOST
+    PORT=$DEFAULT_PORT
+
+    # Check if .env file exists and source it to load variables
+    if [ -f ".env" ]; then
+        echo "Loading environment variables from .env file"
+        # Source the .env file - use '.' for POSIX compatibility
+        # Use set -a/+a to export variables for the gunicorn process
+        set -a
+        . ./.env
+        set +a
+
+        # Override defaults if variables are set in .env
+        if [ -n "$GUNICORN_HOST" ]; then
+            HOST="$GUNICORN_HOST"
+        fi
+        if [ -n "$GUNICORN_PORT" ]; then
+            PORT="$GUNICORN_PORT"
+        fi
+    else
+        echo "No .env file found, using default host and port"
+    fi
+
+    BIND_ADDRESS="${HOST}:${PORT}"
+    echo "Starting Gunicorn on $BIND_ADDRESS"
+
+    # Run Gunicorn from the virtual environment
+    # Assumes Flask app object is named 'app' in 'app.py'
+    venv/bin/gunicorn --bind "$BIND_ADDRESS" app:app
     ;;
   --debug)
     echo "Run app.py in debug mode for development"
-    # Add commands for --debug option here
+    python3 -m venv venv
     ;;
   --install)
     echo "Install option selected"
     # Check if script is run as root
-    if [ "$EUID" -ne 0 ]; then
+    if [ "$(id -u)" -ne 0 ]; then
         echo "This script must be run as root (use sudo)"
         exit 1
     fi
@@ -29,20 +65,17 @@ case "$1" in
         python3 -m venv venv
     fi
 
-    # Activate virtual environment and install requirements
-    source venv/bin/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
+    # Install/upgrade pip and install requirements using the venv's pip
+    venv/bin/pip install --upgrade pip
+    venv/bin/pip install -r requirements.txt
 
-    # Verify key packages are installed correctly
+    # Verify key packages are installed correctly using the venv's python
     echo "Verifying installations..."
-    python3 -c "
-    import flask
-    import replicate
-    import openai
-    import redis
-    print('All key packages verified successfully!')
-    " || {
+    venv/bin/python3 -c "import flask
+import replicate
+import openai
+import redis
+print('All key packages verified successfully!')" || {
         echo "Error: Some required packages failed to install correctly"
         exit 1
     }
@@ -72,12 +105,13 @@ case "$1" in
     systemctl enable redis-server
     systemctl start redis-server
 
+    echo "\n"
     echo "Installation completed successfully!"
     echo "Please configure your API keys in the .env file before running the application."
     echo "You can start the application by running: ./app_run.sh"
     ;;
   *)
-    echo "Usage: $0 {--dockerfile|--debug|--install}"
+    echo "Usage: $0 {--production|--debug|--install}"
     exit 1
     ;;
 esac
