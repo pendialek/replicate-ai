@@ -40,11 +40,11 @@ ENV PYTHONUNBUFFERED=1
 ENV RATELIMIT_STORAGE_URL=redis://localhost:6379/0
 
 # Create script to start both redis and the app
-RUN echo '#!/bin/bash\nservice redis-server start\n./app.sh --production' > /app/docker-entrypoint.sh && \
+RUN echo '#!/bin/bash\nservice redis-server start\ngunicorn --workers 4 --bind ${HOST:-0.0.0.0}:${PORT:-5000} app:app' > /app/docker-entrypoint.sh && \
     chmod +x /app/docker-entrypoint.sh
 
 # Expose port
-EXPOSE 5000
+EXPOSE ${HOST:-0.0.0.0}
 
 # Run the application with Redis
 CMD ["/app/docker-entrypoint.sh"]
