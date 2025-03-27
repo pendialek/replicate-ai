@@ -18,6 +18,6 @@ services:
 
 volumes:
   image-data:
-    name: replicate-ai-images
+    name: replicator-images
   metadata:
-    name: replicate-ai-metadata
+    name: replicator-metadata
